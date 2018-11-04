@@ -11,9 +11,14 @@
     "electron-packager": "^12.2.0"
   },
   "dependencies": {
+    "adm-zip": "^0.4.11",
     "async": "^2.6.1",
     "debug": "^4.1.0",
+    "iconv-lite": "^0.4.24",
     "nedb": "^1.8.0",
-    "needle": "^2.2.4"
+    "needle": "^2.2.4",
+    "resanitize": "^0.3.0",
+    "validator": "^10.8.0",
+    "xml2js": "^0.4.19"
   }
 }

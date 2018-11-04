@@ -1,26 +1,45 @@
 var createHash = require('crypto').createHash;
 
-var md5 = function(string) {
+function get_header(header, credentials, opts) {
+  var type = header.split(' ')[0],
+      user = credentials[0],
+      pass = credentials[1];
+
+  if (type == 'Digest') {
+    return digest.generate(header, user, pass, opts.method, opts.path);
+  } else if (type == 'Basic') {
+    return basic(user, pass);
+  }
+}
+
+////////////////////
+// basic
+
+function md5(string) {
   return createHash('md5').update(string).digest('hex');
 }
 
-var basic = function(user, pass) {
+function basic(user, pass) {
   var str  = typeof pass == 'undefined' ? user : [user, pass].join(':');
   return 'Basic ' + new Buffer(str).toString('base64');
 }
 
-// digest logic inspired from https://github.com/simme/node-http-digest-client
+////////////////////
+// digest
+// logic inspired from https://github.com/simme/node-http-digest-client
+
 var digest = {};
 
 digest.parse_header = function(header) {
   var challenge = {},
-      matches   = header.match(/([a-z0-9_-]+)="([^"]+)"/gi);
+      matches   = header.match(/([a-z0-9_-]+)="?([a-z0-9=\/\.@\s-]+)"?/gi);
 
   for (var i = 0, l = matches.length; i < l; i++) {
-    var pos  = matches[i].indexOf('='),
-        key  = matches[i].substring(0, pos),
-        val  = matches[i].substring(pos + 1);
-    challenge[key] = val.substring(1, val.length - 1);
+    var parts = matches[i].split('='),
+        key   = parts.shift(),
+        val   = parts.join('=').replace(/^"/, '').replace(/"$/, '');
+
+    challenge[key] = val;
   }
 
   return challenge;
@@ -44,31 +63,34 @@ digest.generate = function(header, user, pass, method, path) {
       cnonce    = null,
       challenge = digest.parse_header(header);
 
-  var ha1    = md5(user + ':' + challenge.realm + ':' + pass),
-      ha2    = md5(method + ':' + path),
-      resp   = [ha1, challenge.nonce];
+  var ha1  = md5(user + ':' + challenge.realm + ':' + pass),
+      ha2  = md5(method.toUpperCase() + ':' + path),
+      resp = [ha1, challenge.nonce];
 
   if (typeof challenge.qop === 'string') {
     cnonce = md5(Math.random().toString(36)).substr(0, 8);
-    nc = digest.update_nc(nc);
-    resp = resp.concat(nc, cnonce);
+    nc     = digest.update_nc(nc);
+    resp   = resp.concat(nc, cnonce);
   }
-  
+
   resp = resp.concat(challenge.qop, ha2);
 
   var params = {
-    username: user,
-    realm: challenge.realm,
-    nonce: challenge.nonce,
-    uri: path,
-    qop: challenge.qop,
-    response: md5(resp.join(':'))
+    uri      : path,
+    realm    : challenge.realm,
+    nonce    : challenge.nonce,
+    username : user,
+    response : md5(resp.join(':'))
   }
-  
-//  if (challenge.opaque) {
-//    params.opaque = challenge.opaque;
-//  }
-  
+
+  if (challenge.qop) {
+    params.qop = challenge.qop;
+  }
+
+  if (challenge.opaque) {
+    params.opaque = challenge.opaque;
+  }
+
   if (cnonce) {
     params.nc = nc;
     params.cnonce = cnonce;
@@ -82,6 +104,7 @@ digest.generate = function(header, user, pass, method, path) {
 }
 
 module.exports = {
-  basic: basic,
-  digest: digest.generate
+  header : get_header,
+  basic  : basic,
+  digest : digest.generate
 }
