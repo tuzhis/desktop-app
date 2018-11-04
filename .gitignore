@@ -23,3 +23,7 @@ node_modules/fs.extra
 /public/themes/**/*.css
 /public/css/**/*.css
 /dev/node_modules
+.idea
+node_modules
+out
+package-lock.json

@@ -2,8 +2,8 @@
 const {app, BrowserWindow, crashReporter} = require('electron');
 var ipc = require('electron').ipcMain;
 const electron = require('electron');
-const Menu = electron.Menu
-const Tray = electron.Tray
+const Menu = electron.Menu;
+const Tray = electron.Tray;
 var pdfMain = require('pdf_main');
 var appIcon;
 
@@ -30,7 +30,7 @@ const shouldQuit = app.makeSingleInstance((commandLine, workingDirectory) => {
     }
     mainWindow.focus();
   }
-})
+});
 
 if (shouldQuit) {
   app.quit()
